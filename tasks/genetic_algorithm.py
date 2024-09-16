@@ -21,17 +21,29 @@ def genetic_algorithm(objective_function, bounds, n_iterations, population_size,
                 child[i] = np.random.uniform(bounds[i, 0], bounds[i, 1])
         return child
 
+    def elitism(population, scores, elite_size):
+        elite_indices = np.argsort(scores)[:elite_size]
+        return population[elite_indices]
+
     population = create_population(population_size, bounds)
     best, best_eval = None, float('inf')
-    for gen in range(n_iterations):
+    elite_size = max(1, population_size // 10) 
+
+    for _ in range(n_iterations):
         scores = np.array([objective_function(ind[0], ind[1]) for ind in population])
-        for i in range(population_size):
+        
+        for i in range(len(population)):
             if scores[i] < best_eval:
                 best, best_eval = population[i], scores[i]
-        selected = [select_parents(population, scores) for _ in range(population_size // 2)]
+
+        elite = elitism(population, scores, elite_size)
+        selected = [select_parents(population, scores) for _ in range((population_size - elite_size) // 2)]
         children = []
         for parent1, parent2 in selected:
             for child in crossover(parent1, parent2):
                 children.append(mutate(child, bounds, mutation_rate))
-        population = np.array(children)
+
+        population = np.vstack((elite, np.array(children)[:population_size - elite_size]))
+        mutation_rate *= 0.99  
+
     return best, best_eval
