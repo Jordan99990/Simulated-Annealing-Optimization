@@ -1,10 +1,12 @@
 import numpy as np
 import plotly.graph_objects as go
-from dash import Dash
+from dash import Dash, no_update
 from dash.dependencies import Input, Output, State
+from tasks.genetic_algorithm import genetic_algorithm
 
 from tasks.simulated_annealing import parse_function, simulated_annealing
 from tasks.ui import layout
+from tasks.genetic_algorithm import genetic_algorithm
 
 app = Dash(__name__)
 app.layout = layout
@@ -50,6 +52,27 @@ def update_graph(n_clicks, func_str, n_iterations, step_size, temp):
     optima_info = f"Optima: x = {best[0]:.2f}, y = {best[1]:.2f}, z = {best_eval:.2f}"
     
     return fig, iterations_fig, temperature_fig, optima_info
+
+@app.callback(
+    [Output('n-iterations-input', 'value'),
+     Output('step-size-input', 'value'),
+     Output('temp-input', 'value')],
+    [Input('optimize-button', 'n_clicks')],
+    [State('function-input', 'value')]
+)
+
+def optimize_hyperparameters(n_clicks, func_str):
+    if n_clicks > 0:
+        objective_function = parse_function(func_str)
+        bounds = np.array([[500, 2000], [0.01, 0.1], [5.0, 20.0]])
+        best, _ = genetic_algorithm(objective_function, bounds, n_iterations=100, population_size=50, mutation_rate=0.05)
+        optimized_params = {
+            'n_iterations': int(best[0]),
+            'step_size': best[1],
+            'temp': best[2]
+        }
+        return optimized_params['n_iterations'], optimized_params['step_size'], optimized_params['temp']
+    return no_update, no_update, no_update
 
 if __name__ == '__main__':
     app.run_server(debug=True)
